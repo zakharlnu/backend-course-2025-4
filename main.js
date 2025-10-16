@@ -44,12 +44,12 @@ async function startServer() {
             if (parsedUrl.pathname === "/" && req.method === "GET") {
                 let filtredData = data;
                 if (parsedUrl.query.furnished === 'true') {
-                    filtredData = data.filter((value) => value.furnishingstatus === 'furnished') 
+                    filtredData = filtredData.filter((value) => value.furnishingstatus === 'furnished') 
                 }
 
-                const max_price = parsedUrl.query.max_price
-                if (max_price && parseInt(max_price)) {
-                    filtredData = filtredData.filter((value) => value.price < max_price);
+                const maxPrice = parseInt(parsedUrl.query.max_price)
+                if (maxPrice) {
+                    filtredData = filtredData.filter((value) => value.price < maxPrice);
                 }
 
                 const builder = new XMLBuilder();
