@@ -29,8 +29,7 @@ const { host, port, input } = opts;
 function readJsonFile(filePath, callback) {
     fs.readFile(filePath, { encoding: 'utf-8' }, (error, data) => {
         if (error) {
-            console.error("Cannot find input file");
-            return callback(error);
+            return callback(new Error("Cannot find input file"));
         }
         try {
             const parsedData = JSON.parse(data);
@@ -45,7 +44,7 @@ function readJsonFile(filePath, callback) {
 
 readJsonFile(input, (error, data) => {
     if (error) {
-        console.error("error reading or parsing file");
+        console.error(`error: ${error.message}`);
         return;
     }
     const server = http.createServer((req, res) => {
