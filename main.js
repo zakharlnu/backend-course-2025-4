@@ -1,6 +1,6 @@
 const { program } = require("commander")
 const http = require('http');
-const fs = require("node:fs").promises
+const fs = require("node:fs")
 const { XMLBuilder } = require("fast-xml-parser");
 const url = require('node:url')
 
@@ -26,20 +26,30 @@ if (!opts.input || !opts.host || !opts.port) {
 
 const { host, port, input } = opts;
 
-async function readJsonFile(filePath) {
-    try {
-        const data = await fs.readFile(filePath, { encoding: "utf-8" })
-        return JSON.parse(data);
-    } catch(error) {
-        console.error("Cannot find input file");
-        process.exit(1);
-    }
+function readJsonFile(filePath, callback) {
+    fs.readFile(filePath, { encoding: 'utf-8' }, (error, data) => {
+        if (error) {
+            console.error("Cannot find input file");
+            return callback(error);
+        }
+        try {
+            const parsedData = JSON.parse(data);
+            return callback(null, parsedData);
+        } 
+        catch (error) {
+            return callback(error);
+        }
+    });
 }
 
-async function startServer() {
-    try {
-        const data = await readJsonFile(input);
-        const server = http.createServer((req, res) => {
+
+readJsonFile(input, (error, data) => {
+    if (error) {
+        console.error("error reading or parsing file");
+        return;
+    }
+    const server = http.createServer((req, res) => {
+        try {
             const parsedUrl = url.parse(req.url, true);
             if (parsedUrl.pathname === "/" && req.method === "GET") {
                 let filtredData = data;
@@ -56,11 +66,11 @@ async function startServer() {
                 const xml = builder.build({
                     houses: {
                         house: filtredData.map(({ price, area, furnishingstatus }) => ({
-                          price,
-                          area,
-                          furnishingstatus,
+                        price,
+                        area,
+                        furnishingstatus,
                         })),
-                      },
+                    },
                 });
 
                 res.writeHead(200, { "Content-Type": "application/xml" });
@@ -70,16 +80,13 @@ async function startServer() {
                 res.writeHead(404, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ message: "not found"}));
             }
-        });
+        } catch(error) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: `internal server error: ${error.message}}`}));
+        } 
+    });
 
-        server.listen(port, host, () => {
-            console.log(`server running at http://${host}:${port}/`);
-        });
-    }
-    catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "internal server error" }));
-    }
-}
-
-startServer();
+    server.listen(port, host, () => {
+        console.log(`server running at http://${host}:${port}/`);
+    });
+})
